@@ -1,0 +1,6 @@
+[submodule "stock-app-frontend"]
+	path = stock-app-frontend
+	url = https://github.com/Bucheli05/stock-app-frontend
+[submodule "stock-app-backend"]
+	path = stock-app-backend
+	url = https://github.com/Bucheli05/stock-app-backend
