@@ -1,0 +1,64 @@
+services:
+  cockroachdb:
+    image: cockroachdb/cockroach:latest
+    container_name: stock-app-cockroach
+    ports:
+      - "26257:26257"  # CRDB SQL port
+      - "8081:8080"    # CRDB Admin UI
+    command: start-single-node --insecure
+    volumes:
+      - cockroach_data:/cockroach/cockroach-data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health?ready=1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - stock-network
+
+  db-init:
+    image: cockroachdb/cockroach:latest
+    container_name: stock-app-db-init
+    command: sql --insecure --host=cockroachdb:26257 -e "CREATE DATABASE IF NOT EXISTS my_new_db;"
+    depends_on:
+      cockroachdb:
+        condition: service_healthy
+    networks:
+      - stock-network
+
+  backend:
+    build:
+      context: ./stock-app-backend
+      dockerfile: Dockerfile
+    container_name: stock-app-backend
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./stock-app-backend/.env
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    networks:
+      - stock-network
+
+  frontend:
+    build:
+      context: ./stock-app-frontend
+      dockerfile: Dockerfile
+    container_name: stock-app-frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - stock-network
+    environment:
+      - VITE_API_URL=http://backend:8080
+
+volumes:
+  cockroach_data:
+
+networks:
+  stock-network:
+    driver: bridge
